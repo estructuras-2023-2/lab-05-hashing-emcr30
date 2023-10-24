@@ -2,72 +2,116 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define TABLE_SIZE 10
-
-typedef struct Node {
-    int data;
-    struct Node* next;
-} Node;
+#define SIZE 10
 
 typedef struct HashTable {
-    Node* table[TABLE_SIZE];
-    int (*hash_function)(int);
+    int n;
+    int* bucket[SIZE];
+    int (*h)(int, int);
 } HashTable;
 
-int mi_Mod(int x) {
-    return x % TABLE_SIZE;
-}
-
-int randomFn(int x) {
-    return rand() % TABLE_SIZE;
-}
-
-void initHashTable(HashTable* ht, int (*hash_function)(int)) {
-    ht->hash_function = hash_function;
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        ht->table[i] = NULL;
-    }
+int mi_Mod(int x, int n) {
+    return x % n;
 }
 
 void insert(HashTable* ht, int x) {
-    int index = ht->hash_function(x);
-    Node* new_node = (Node*)malloc(sizeof(Node));
-    new_node->data = x;
-    new_node->next = ht->table[index];
-    ht->table[index] = new_node;
+    int index = ht->h(x, ht->n);
+    ht->bucket[index] = (int*)realloc(ht->bucket[index], (ht->bucket[index][0] + 2) * sizeof(int));
+    ht->bucket[index][0] += 1;
+    ht->bucket[index][ht->bucket[index][0]] = x;
 }
 
-Node* find(HashTable* ht, int x) {
-    int index = ht->hash_function(x);
-    Node* current = ht->table[index];
-    while (current != NULL) {
-        if (current->data == x) {
-            return current;
+int delete(HashTable* ht, int x) {
+    int index = ht->h(x, ht->n);
+    int* poss = ht->bucket[index];
+    for (int i = 1; i <= poss[0]; i++) {
+        if (poss[i] == x) {
+            int deleted = poss[i];
+            for (int j = i; j < poss[0]; j++) {
+                poss[j] = poss[j + 1];
+            }
+            poss[0] -= 1;
+            poss = (int*)realloc(poss, (poss[0] + 1) * sizeof(int));
+            ht->bucket[index] = poss;
+            return deleted;
         }
-        current = current->next;
     }
-    return NULL;
+    return -1;
+}
+
+int find(HashTable* ht, int x) {
+    int index = ht->h(x, ht->n);
+    int* poss = ht->bucket[index];
+    for (int i = 1; i <= poss[0]; i++) {
+        if (poss[i] == x) {
+            return poss[i];
+        }
+    }
+    return -1;
+}
+
+int randomFn(int x, int n) {
+    return rand() % n;
+}
+
+int* RandomHashFun(int M, int n) {
+    int* fnTable = (int*)malloc(M * sizeof(int));
+    for (int x = 0; x < M; x++) {
+        fnTable[x] = rand() % n;
+    }
+    return fnTable;
 }
 
 int main() {
     srand(time(NULL));
 
-    HashTable ht1, ht2;
-    initHashTable(&ht1, mi_Mod);
-    initHashTable(&ht2, randomFn);
-
-    insert(&ht1, 1234567);
-    Node* found = find(&ht1, 1234567);
-    if (found) {
-        printf("Encontrado: %d\n", found->data);
+    HashTable ht1;
+    ht1.n = SIZE;
+    ht1.h = mi_Mod;
+    for (int i = 0; i < SIZE; i++) {
+        ht1.bucket[i] = (int*)malloc(sizeof(int));
+        ht1.bucket[i][0] = 0;
     }
 
-    insert(&ht2, 1234567);
-    insert(&ht2, 76554334234);
+    int x = 1234567;
+    long long int y = 76554334234;
 
-    printf("Resultados random de Hash:\n");
-    printf("%d\n", randomFn(52));
-    printf("%d\n", randomFn(3235235));
+    insert(&ht1, x);
+
+    int result = find(&ht1, x);
+    if (result != -1) {
+        printf(" %d se encuentra en la tabla hash.\n", result);
+    } else {
+        printf(" %d no se encuentra en la tabla hash.\n", x);
+    }
+
+    int z = 42;
+    insert(&ht1, z);
+
+    result = find(&ht1, z);
+    if (result != -1) {
+        printf("%d se encuentra en la tabla hash.\n", result);
+    } else {
+        printf("%d no se encuentra en la tabla hash.\n", z);
+    }
+
+    result = delete(&ht1, x);
+    if (result != -1) {
+        printf("Se ha eliminado %d de la tabla hash.\n", result);
+    } else {
+        printf("No se encontró %d para eliminar en la tabla hash.\n", x);
+    }
+
+    int result2 = delete(&ht1, 999);
+    if (result2 != -1) {
+        printf("Se ha eliminado %d de la tabla hash.\n", result2);
+    } else {
+        printf("No se encontró el elemento para eliminar en la tabla hash.\n");
+    }
+
+    for (int i = 0; i < SIZE; i++) {
+        free(ht1.bucket[i]);
+    }
 
     return 0;
 }
