@@ -2,72 +2,123 @@
 #include <stdlib.h>
 #include <time.h>
 
-#define TABLE_SIZE 10
+#define SIZE 10
 
-typedef struct Node {
-    int data;
+struct Node {
+    int value;
     struct Node* next;
-} Node;
+};
 
-typedef struct HashTable {
-    Node* table[TABLE_SIZE];
-    int (*hash_function)(int);
-} HashTable;
+struct HashTable {
+    int n;
+    struct Node* bucket[SIZE];
+};
 
-int mi_Mod(int x) {
-    return x % TABLE_SIZE;
-}
-
-int randomFn(int x) {
-    return rand() % TABLE_SIZE;
-}
-
-void initHashTable(HashTable* ht, int (*hash_function)(int)) {
-    ht->hash_function = hash_function;
-    for (int i = 0; i < TABLE_SIZE; i++) {
-        ht->table[i] = NULL;
+struct HashTable* initHashTable(int n) {
+    struct HashTable* ht = (struct HashTable*)malloc(sizeof(struct HashTable));
+    ht->n = n;
+    for (int i = 0; i < SIZE; i++) {
+        ht->bucket[i] = NULL;
     }
+    return ht;
 }
 
-void insert(HashTable* ht, int x) {
-    int index = ht->hash_function(x);
-    Node* new_node = (Node*)malloc(sizeof(Node));
-    new_node->data = x;
-    new_node->next = ht->table[index];
-    ht->table[index] = new_node;
+int hashFunction(int x, int n) {
+    return x % n;
 }
 
-Node* find(HashTable* ht, int x) {
-    int index = ht->hash_function(x);
-    Node* current = ht->table[index];
+void insert(struct HashTable* ht, int x) {
+    int index = hashFunction(x, ht->n);
+    struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
+    newNode->value = x;
+    newNode->next = ht->bucket[index];
+    ht->bucket[index] = newNode;
+}
+
+int delete(struct HashTable* ht, int x) {
+    int index = hashFunction(x, ht->n);
+    struct Node* current = ht->bucket[index];
+    struct Node* prev = NULL;
+
     while (current != NULL) {
-        if (current->data == x) {
-            return current;
+        if (current->value == x) {
+            if (prev != NULL) {
+                prev->next = current->next;
+            } else {
+                ht->bucket[index] = current->next;
+            }
+            int deleted = current->value;
+            free(current);
+            return deleted;
+        }
+        prev = current;
+        current = current->next;
+    }
+    return -1;
+}
+
+int find(struct HashTable* ht, int x) {
+    int index = hashFunction(x, ht->n);
+    struct Node* current = ht->bucket[index];
+
+    while (current != NULL) {
+        if (current->value == x) {
+            return current->value;
         }
         current = current->next;
     }
-    return NULL;
+    return -1;
+}
+
+void printTable(struct HashTable* ht) {
+    printf("Elementos en la tabla hash: ");
+    for (int i = 0; i < SIZE; i++) {
+        struct Node* current = ht->bucket[i];
+        while (current != NULL) {
+            printf("%d ", current->value);
+            current = current->next;
+        }
+    }
+    printf("\n");
 }
 
 int main() {
     srand(time(NULL));
 
-    HashTable ht1, ht2;
-    initHashTable(&ht1, mi_Mod);
-    initHashTable(&ht2, randomFn);
+    struct HashTable* ht = initHashTable(SIZE);
 
-    insert(&ht1, 1234567);
-    Node* found = find(&ht1, 1234567);
-    if (found) {
-        printf("Encontrado: %d\n", found->data);
+    printf("Ingrese elementos para insertar en la tabla hash (ingrese -1 para finalizar):\n");
+    int elemento;
+    while (1) {
+        printf("Elemento: ");
+        scanf("%d", &elemento);
+        if (elemento == -1) {
+            break;
+        }
+        insert(ht, elemento);
     }
 
-    insert(&ht2, 1234567);
-    insert(&ht2, 76554334234);
+    // Realizar búsquedas y eliminaciones según sea necesario.
+    printf("Ingrese un elemento para buscar: ");
+    scanf("%d", &elemento);
+    int encontrado = find(ht, elemento);
+    if (encontrado != -1) {
+        printf("Elemento encontrado en la tabla hash: %d\n", encontrado);
+    } else {
+        printf("Elemento no encontrado en la tabla hash.\n");
+    }
 
-    printf("Resultados random de Hash:\n");
-    printf("%d\n", randomFn(52));
-    printf("%d\n", randomFn(3235235));
+    printf("Ingrese un elemento para eliminar: ");
+    scanf("%d", &elemento);
+    int eliminado = delete(ht, elemento);
+    if (eliminado != -1) {
+        printf("Elemento eliminado de la tabla hash: %d\n", eliminado);
+    } else {
+        printf("Elemento no encontrado en la tabla hash para eliminar.\n");
+    }
+
+    // Mostrar los elementos restantes en la tabla hash.
+    printTable(ht);
 
     return 0;
 }
